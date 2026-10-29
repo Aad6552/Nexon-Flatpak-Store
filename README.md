@@ -77,7 +77,7 @@ flatpak uninstall io.github.aad6552.NexonFlatpakStore
 
 ```bash
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install --user flathub org.gnome.Platform//47 org.gnome.Sdk//47
+flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50
 flatpak-builder --user --install --force-clean \
   --state-dir=.flatpak-builder/state \
   .flatpak-builder/build io.github.aad6552.NexonFlatpakStore.json
@@ -213,7 +213,7 @@ published** on Flathub. Before opening a submission pull request:
 3. Validate locally:
    ```bash
    flatpak-builder-lint manifest flathub/io.github.aad6552.NexonFlatpakStore.json
-   flatpak run --command=appstreamcli org.gnome.Sdk//47 \
+   flatpak run --command=appstreamcli org.gnome.Sdk//50 \
      validate --no-net data/io.github.aad6552.NexonFlatpakStore.metainfo.xml
    ```
 4. Submit to Flathub: fork `flathub/flathub`, create a branch named
