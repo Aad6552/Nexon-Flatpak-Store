@@ -447,7 +447,10 @@ class StoreWindow(Adw.ApplicationWindow):
     ) -> bool:
         self._stop_busy()
         if on_success is not None:
-            on_success(result)
+            try:
+                on_success(result)
+            except Exception as error:  # noqa: BLE001 - a UI bug must not blank the window
+                self._show_error("Something went wrong while showing this page", error)
         return GLib.SOURCE_REMOVE
 
     def _task_failed(
@@ -458,7 +461,10 @@ class StoreWindow(Adw.ApplicationWindow):
     ) -> bool:
         self._stop_busy()
         if on_error is not None:
-            on_error(error)
+            try:
+                on_error(error)
+            except Exception:  # noqa: BLE001 - report the original error instead
+                self._show_error(description, error)
         else:
             self._show_error(description, error)
         return GLib.SOURCE_REMOVE
@@ -907,17 +913,20 @@ class StoreWindow(Adw.ApplicationWindow):
             text.append(summary)
 
         badges = Gtk.Box(spacing=8, margin_top=4)
+        badge_count = 0
         if info.get("verified"):
             verified = Gtk.Label(label="Verified by Flathub")
             verified.add_css_class("caption")
             verified.add_css_class("accent")
             badges.append(verified)
+            badge_count += 1
         if info.get("license"):
             license_label = Gtk.Label(label=info["license"])
             license_label.add_css_class("caption")
             license_label.add_css_class("dim-label")
             badges.append(license_label)
-        if len(badges) > 0:
+            badge_count += 1
+        if badge_count:
             text.append(badges)
 
         actions = Gtk.Box(spacing=10, margin_top=10)
