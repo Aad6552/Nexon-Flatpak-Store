@@ -224,8 +224,9 @@ published** on Flathub. Before opening a submission pull request:
 3. Validate locally:
    ```bash
    flatpak-builder-lint manifest flathub/io.github.aad6552.NexonFlatpakStore.json
-   flatpak run --command=appstreamcli org.gnome.Sdk//50 \
-     validate --no-net data/io.github.aad6552.NexonFlatpakStore.metainfo.xml
+   # the SDK cannot see your working directory: mount it and pass an absolute path
+   flatpak run --filesystem=host --command=appstreamcli org.gnome.Sdk//50 \
+     validate --no-net "$PWD/data/io.github.aad6552.NexonFlatpakStore.metainfo.xml"
    ```
 4. Submit to Flathub: fork `flathub/flathub`, create a branch named
    `io.github.aad6552.NexonFlatpakStore`, copy in
