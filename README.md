@@ -204,7 +204,20 @@ published** on Flathub. Before opening a submission pull request:
 1. Add at least one screenshot to
    `data/io.github.aad6552.NexonFlatpakStore.metainfo.xml` (hosted URLs are
    simplest, for example `raw.githubusercontent.com` links to PNGs in this repo).
-   Flathub requires screenshots for the app page.
+   Flathub requires screenshots for the app page. Take them on a machine with a
+   desktop, then commit them under `docs/`:
+   ```bash
+   ./run.sh --source          # then capture the window, e.g. gnome-screenshot -a -f docs/discover.png
+   ```
+   ```xml
+   <screenshots>
+     <screenshot type="default">
+       <caption>Browse and search Flathub</caption>
+       <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/discover.png</image>
+     </screenshot>
+   </screenshots>
+   ```
+   Place the block after `</description>` and before `<launchable>`.
 2. Tag the release and push the tag, which the submission manifest references:
    ```bash
    git tag -a v1.0.0 -m "Nexon Flatpak Store 1.0.0"
@@ -220,6 +233,21 @@ published** on Flathub. Before opening a submission pull request:
    `io.github.aad6552.NexonFlatpakStore`, copy in
    `flathub/io.github.aad6552.NexonFlatpakStore.json` (named
    `io.github.aad6552.NexonFlatpakStore.json`), and open a pull request.
+   ```bash
+   # fork flathub/flathub on GitHub first, then:
+   git clone git@github.com:Aad6552/flathub.git
+   cd flathub
+   git checkout -b io.github.aad6552.NexonFlatpakStore
+   cp ../Nexon-Flatpak-Store/flathub/io.github.aad6552.NexonFlatpakStore.json .
+   git add io.github.aad6552.NexonFlatpakStore.json
+   git commit -m "Add io.github.aad6552.NexonFlatpakStore"
+   git push origin io.github.aad6552.NexonFlatpakStore
+   ```
+   Then open the pull request against `flathub/flathub:new-pr` (or `master` if
+   that branch is gone) from the GitHub page. Flathub's CI builds the manifest,
+   robots review metadata, and a human maintainer approves it; only after that
+   merge does the app appear on flathub.org and install with
+   `flatpak install flathub io.github.aad6552.NexonFlatpakStore`.
 5. In the pull request, explain the `--talk-name=org.freedesktop.Flatpak`
    permission: the application is a Flatpak manager, so it must invoke the host
    `flatpak` command through `flatpak-spawn` instead of touching host files.
