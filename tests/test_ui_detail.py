@@ -57,7 +57,7 @@ def install_fake_gi():
     gi = types.ModuleType("gi")
     gi.require_version = lambda *args, **kwargs: None
     repository = types.ModuleType("gi.repository")
-    for name in ("Gtk", "Adw", "GdkPixbuf", "Gio", "GLib", "Pango"):
+    for name in ("Gtk", "Adw", "Gdk", "GdkPixbuf", "Gio", "GLib", "Pango"):
         setattr(repository, name, AutoNamespace())
     repository.Adw.ApplicationWindow = FakeApplicationWindow
     gi.repository = repository
@@ -81,7 +81,6 @@ class DetailPageTest(unittest.TestCase):
         instance.installed = {}
         instance.update_index = {}
         instance._icon_image = lambda path, size: FakeWidget()
-        instance._scaled_image = lambda path, width: None
         return instance
 
     def test_fake_widgets_behave_like_gtk(self):
@@ -112,6 +111,23 @@ class DetailPageTest(unittest.TestCase):
     def test_detail_page_renders_with_minimal_info(self):
         instance = self.make_window()
         instance._render_detail({"app_id": "org.example.App"})
+        self.assertTrue(instance.detail_box.children)
+
+    def test_screenshot_fits_the_viewport(self):
+        # 922x572 is a typical Flathub screenshot: it used to be drawn smaller
+        # than its slot, so the page showed a sliver of it.
+        self.assertEqual(window.StoreWindow._fit_size(922, 572), (677, 420))
+        self.assertEqual(window.StoreWindow._fit_size(410, 666), (259, 420))
+        self.assertEqual(window.StoreWindow._fit_size(0, 0), (0, 0))
+
+    def test_a_broken_section_does_not_hide_the_rest(self):
+        instance = self.make_window()
+
+        def boom(_info):
+            raise RuntimeError("boom")
+
+        instance._detail_header = boom
+        instance._render_detail({"app_id": "org.example.App", "version": "1.0"})
         self.assertTrue(instance.detail_box.children)
 
     def test_detail_page_for_installed_app(self):

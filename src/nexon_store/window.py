@@ -16,7 +16,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GdkPixbuf", "2.0")
 
-from gi.repository import Adw, GdkPixbuf, Gio, GLib, Gtk, Pango
+from gi.repository import Adw, Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango
 
 from . import APP_NAME, api, flatpak, paths
 
@@ -523,13 +523,41 @@ class StoreWindow(Adw.ApplicationWindow):
         image.add_css_class("dim-label")
         return image
 
-    @staticmethod
-    def _scaled_image(path: str, width: int) -> Gtk.Image | None:
+    #: Largest size a screenshot is drawn at on the detail page.
+    SCREENSHOT_MAX_WIDTH = 760
+    SCREENSHOT_MAX_HEIGHT = 420
+
+    @classmethod
+    def _fit_size(cls, width: int, height: int) -> tuple[int, int]:
+        """Scale ``width`` x ``height`` down so it fits the screenshot viewport."""
+        if width <= 0 or height <= 0:
+            return (0, 0)
+        scale = min(cls.SCREENSHOT_MAX_WIDTH / width, cls.SCREENSHOT_MAX_HEIGHT / height)
+        return (max(1, round(width * scale)), max(1, round(height * scale)))
+
+    @classmethod
+    def _screenshot_picture(cls, path: str) -> Gtk.Widget | None:
+        """Draw one downloaded screenshot at a readable size with rounded corners."""
         try:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, width, -1, True)
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
         except GLib.Error:
             return None
-        return Gtk.Image.new_from_pixbuf(pixbuf)
+        target_width, target_height = cls._fit_size(
+            pixbuf.get_width(), pixbuf.get_height()
+        )
+        if not target_width or not target_height:
+            return None
+        frame = Gtk.Box(overflow=Gtk.Overflow.HIDDEN)
+        frame.add_css_class("card")
+        frame.set_size_request(target_width, target_height)
+        frame.append(
+            Gtk.Picture(
+                paintable=Gdk.Texture.new_for_pixbuf(pixbuf),
+                content_fit=Gtk.ContentFit.CONTAIN,
+                can_shrink=True,
+            )
+        )
+        return frame
 
     # ------------------------------------------------------------------ #
     # Installed / updates state
@@ -890,9 +918,40 @@ class StoreWindow(Adw.ApplicationWindow):
         self._detail_info = None
 
     def _render_detail(self, info: dict[str, Any]) -> None:
-        app_id = info.get("app_id") or ""
-        clear_container(self.detail_box)
+        """Build the detail page one section at a time.
 
+        Each section is independent, so a widget that fails to build shows an
+        inline message instead of leaving the page empty and the app without a
+        description, version, screenshots or install button.
+        """
+        clear_container(self.detail_box)
+        builders: tuple[tuple[str, Callable[[dict[str, Any]], Any]], ...] = (
+            ("the application header", self._detail_header),
+            ("the action buttons", self._detail_actions),
+            ("screenshots", self._detail_screenshots),
+            ("the application details", self._detail_facts),
+            ("the description", self._detail_description),
+            ("the release notes", self._detail_release_notes),
+        )
+        for label, build in builders:
+            try:
+                widget = build(info)
+            except Exception as error:  # noqa: BLE001 - one bad section must not hide the rest
+                widget = self._detail_error(label, error)
+            if widget is not None:
+                self.detail_box.append(widget)
+
+    @staticmethod
+    def _detail_error(section: str, error: BaseException) -> Gtk.Widget:
+        return Gtk.Label(
+            label=f"Could not show {section} ({type(error).__name__}: {error}).",
+            xalign=0,
+            wrap=True,
+            selectable=True,
+        )
+
+    def _detail_header(self, info: dict[str, Any]) -> Gtk.Widget:
+        app_id = info.get("app_id") or ""
         header = Gtk.Box(spacing=20)
         header.append(self._icon_image(info.get("icon_path"), 128))
 
@@ -901,16 +960,17 @@ class StoreWindow(Adw.ApplicationWindow):
         title.add_css_class("title-1")
         text.append(title)
 
-        if info.get("developer"):
-            developer = Gtk.Label(label=info["developer"], xalign=0)
-            developer.add_css_class("dim-label")
-            text.append(developer)
+        developer = str(info.get("developer") or "").strip()
+        if developer:
+            developer_label = Gtk.Label(label=developer, xalign=0)
+            developer_label.add_css_class("dim-label")
+            text.append(developer_label)
 
-        if info.get("summary"):
-            summary = Gtk.Label(
-                label=info["summary"], xalign=0, wrap=True, max_width_chars=70
+        summary = str(info.get("summary") or "").strip()
+        if summary:
+            text.append(
+                Gtk.Label(label=summary, xalign=0, wrap=True, max_width_chars=70)
             )
-            text.append(summary)
 
         badges = Gtk.Box(spacing=8, margin_top=4)
         badge_count = 0
@@ -921,7 +981,7 @@ class StoreWindow(Adw.ApplicationWindow):
             badges.append(verified)
             badge_count += 1
         if info.get("license"):
-            license_label = Gtk.Label(label=info["license"])
+            license_label = Gtk.Label(label=str(info["license"]))
             license_label.add_css_class("caption")
             license_label.add_css_class("dim-label")
             badges.append(license_label)
@@ -929,20 +989,20 @@ class StoreWindow(Adw.ApplicationWindow):
         if badge_count:
             text.append(badges)
 
-        actions = Gtk.Box(spacing=10, margin_top=10)
-        installed = app_id in self.installed
-        if installed:
+        header.append(text)
+        return header
+
+    def _detail_actions(self, info: dict[str, Any]) -> Gtk.Widget:
+        app_id = info.get("app_id") or ""
+        actions = Gtk.Box(spacing=10, margin_top=10, halign=Gtk.Align.START)
+        if app_id in self.installed:
             open_button = Gtk.Button(label="Open")
             open_button.add_css_class("suggested-action")
-            open_button.connect(
-                "clicked", lambda *_: self._launch_app(app_id)
-            )
+            open_button.connect("clicked", lambda *_: self._launch_app(app_id))
             actions.append(open_button)
             if app_id in self.update_index:
                 update_button = Gtk.Button(label="Update")
-                update_button.connect(
-                    "clicked", lambda *_: self._update_app(app_id)
-                )
+                update_button.connect("clicked", lambda *_: self._update_app(app_id))
                 actions.append(update_button)
             remove_button = Gtk.Button(label="Remove")
             remove_button.add_css_class("destructive-action")
@@ -953,45 +1013,62 @@ class StoreWindow(Adw.ApplicationWindow):
         else:
             install_button = Gtk.Button(label="Install")
             install_button.add_css_class("suggested-action")
-            install_button.connect(
-                "clicked", lambda *_: self._install_app(app_id)
-            )
+            install_button.connect("clicked", lambda *_: self._install_app(app_id))
             actions.append(install_button)
+        return actions
 
-        text.append(actions)
-        header.append(text)
-        self.detail_box.append(header)
+    def _detail_screenshots(self, info: dict[str, Any]) -> Gtk.Widget | None:
+        paths = [
+            path
+            for path in info.get("screenshot_paths") or []
+            if isinstance(path, str) and os.path.exists(path)
+        ]
+        if not paths:
+            return None
 
-        if info.get("screenshot_paths"):
-            screenshots_title = Gtk.Label(label="Screenshots", xalign=0)
-            screenshots_title.add_css_class("title-4")
-            self.detail_box.append(screenshots_title)
+        section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        title = Gtk.Label(label="Screenshots", xalign=0)
+        title.add_css_class("title-4")
+        section.append(title)
 
-            strip = Gtk.Box(spacing=12)
-            for path in info["screenshot_paths"]:
-                image = self._scaled_image(path, 480)
-                if image is not None:
-                    strip.append(image)
-            strip_scroller = Gtk.ScrolledWindow(
+        strip = Gtk.Box(spacing=12)
+        strip.set_valign(Gtk.Align.START)
+        drawn = 0
+        for path in paths[:6]:
+            picture = self._screenshot_picture(path)
+            if picture is not None:
+                strip.append(picture)
+                drawn += 1
+        if not drawn:
+            return None
+
+        section.append(
+            Gtk.ScrolledWindow(
                 hscrollbar_policy=Gtk.PolicyType.AUTOMATIC,
                 vscrollbar_policy=Gtk.PolicyType.NEVER,
+                propagate_natural_height=True,
                 hexpand=True,
                 child=strip,
             )
-            self.detail_box.append(strip_scroller)
+        )
+        return section
 
+    @staticmethod
+    def _detail_facts(info: dict[str, Any]) -> Gtk.Widget:
+        app_id = info.get("app_id") or ""
         rows: list[tuple[str, str]] = [("Application ID", app_id)]
         if info.get("version"):
-            rows.append(("Latest version", info["version"]))
+            rows.append(("Latest version", str(info["version"])))
         if info.get("released"):
-            rows.append(("Last updated", info["released"]))
+            rows.append(("Last updated", str(info["released"])))
         if info.get("categories"):
-            rows.append(("Categories", ", ".join(info["categories"])))
+            categories = ", ".join(str(name) for name in info["categories"])
+            rows.append(("Categories", categories))
         if info.get("developer"):
-            rows.append(("Developer", info["developer"]))
+            rows.append(("Developer", str(info["developer"])))
         urls = info.get("urls") or {}
         if urls.get("homepage"):
-            rows.append(("Homepage", urls["homepage"]))
+            rows.append(("Homepage", str(urls["homepage"])))
 
         grid = Gtk.Grid(column_spacing=20, row_spacing=8)
         for row_index, (key, value) in enumerate(rows):
@@ -1002,34 +1079,34 @@ class StoreWindow(Adw.ApplicationWindow):
             )
             grid.attach(key_label, 0, row_index, 1, 1)
             grid.attach(value_label, 1, row_index, 1, 1)
-        self.detail_box.append(grid)
+        return grid
 
-        if info.get("description"):
-            description_title = Gtk.Label(label="About", xalign=0)
-            description_title.add_css_class("title-4")
-            self.detail_box.append(description_title)
-            description = Gtk.Label(
-                label=info["description"],
-                xalign=0,
-                wrap=True,
-                selectable=True,
-                max_width_chars=100,
-            )
-            self.detail_box.append(description)
+    @staticmethod
+    def _detail_text_section(
+        title_text: str, body: str, dim: bool = False
+    ) -> Gtk.Widget | None:
+        body = (body or "").strip()
+        if not body:
+            return None
+        section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        title = Gtk.Label(label=title_text, xalign=0)
+        title.add_css_class("title-4")
+        section.append(title)
+        label = Gtk.Label(
+            label=body, xalign=0, wrap=True, selectable=True, max_width_chars=100
+        )
+        if dim:
+            label.add_css_class("dim-label")
+        section.append(label)
+        return section
 
-        if info.get("release_notes"):
-            notes_title = Gtk.Label(label="What's new", xalign=0)
-            notes_title.add_css_class("title-4")
-            self.detail_box.append(notes_title)
-            notes = Gtk.Label(
-                label=info["release_notes"],
-                xalign=0,
-                wrap=True,
-                selectable=True,
-                max_width_chars=100,
-            )
-            notes.add_css_class("dim-label")
-            self.detail_box.append(notes)
+    def _detail_description(self, info: dict[str, Any]) -> Gtk.Widget | None:
+        return self._detail_text_section("About", str(info.get("description") or ""))
+
+    def _detail_release_notes(self, info: dict[str, Any]) -> Gtk.Widget | None:
+        return self._detail_text_section(
+            "What's new", str(info.get("release_notes") or ""), dim=True
+        )
 
     # ------------------------------------------------------------------ #
     # Operations
@@ -1057,7 +1134,7 @@ class StoreWindow(Adw.ApplicationWindow):
 
     def _uninstall_app(self, app_id: str) -> None:
         record = self.installed.get(app_id)
-        installation = record.installation if record and record.installation else "user"
+        installation = record.installation if record else ""
 
         self._run_operation(
             f"Removing {app_id}…",

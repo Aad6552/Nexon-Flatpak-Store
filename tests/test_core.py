@@ -100,6 +100,25 @@ class FlatpakCommandTests(unittest.TestCase):
         self.assertIn("line 29", str(context.exception))
         self.assertEqual(context.exception.output, output)
 
+    def test_uninstall_retries_other_installations(self) -> None:
+        calls: list[tuple[str, ...]] = []
+
+        def fake_run(*args, **kwargs):
+            calls.append(args)
+            if args[1:3] == ("list", "--columns=installation"):
+                return mock.Mock(returncode=0, stdout="system\nuser\n", stderr="")
+            if args[:2] == ("flatpak", "--installation=system"):
+                return mock.Mock(returncode=1, stdout="", stderr="error: not installed")
+            return mock.Mock(returncode=0, stdout="removed", stderr="")
+
+        with mock.patch.object(flatpak, "run", side_effect=fake_run):
+            output = flatpak.uninstall("org.mozilla.firefox", installation="system")
+
+        self.assertEqual(output, "removed")
+        self.assertTrue(
+            any(args[:2] == ("flatpak", "--installation=user") for args in calls)
+        )
+
     def test_summarize_keeps_last_lines(self) -> None:
         text = "\n".join(f"line {index}" for index in range(20))
         summary = flatpak.summarize(text, limit=3)

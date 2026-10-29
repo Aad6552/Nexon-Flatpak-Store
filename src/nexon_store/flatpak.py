@@ -171,6 +171,14 @@ def installations() -> list[str]:
     return names
 
 
+def known_installations() -> list[str]:
+    """Like :func:`installations`, but empty instead of raising when flatpak fails."""
+    try:
+        return installations()
+    except FlatpakError:
+        return []
+
+
 def updates() -> dict[str, dict[str, str]]:
     """Return applications with a pending update, keyed by application ID."""
     result: dict[str, dict[str, str]] = {}
@@ -230,19 +238,43 @@ def install(app_id: str, installation: str = "user", remote: str = FLATHUB_REMOT
     )
 
 
-def uninstall(app_id: str, installation: str = "user", delete_data: bool = False) -> str:
-    """Remove ``app_id`` (optionally wiping its data) from ``installation``."""
-    args = [
-        "flatpak",
-        f"--installation={installation}",
-        "uninstall",
-        "-y",
-        "--noninteractive",
-    ]
-    if delete_data:
-        args.append("--delete-data")
-    args.append(app_id)
-    return _checked(*args, timeout=1800, action=f"Removing {app_id}")
+def uninstall(app_id: str, installation: str = "", delete_data: bool = False) -> str:
+    """Remove ``app_id`` from whichever installation actually holds it.
+
+    The installation reported by ``flatpak list`` is not always the one that
+    accepts the removal, so this tries the recorded installation first, then
+    every installation that has applications, then flatpak's own default. Only
+    when all of them fail is the command reported as failed, with the message
+    from the most specific attempt.
+    """
+    candidates: list[str] = []
+    for name in [installation, *known_installations(), ""]:
+        if name not in candidates:
+            candidates.append(name)
+
+    errors: list[str] = []
+    for candidate in candidates:
+        args = ["flatpak"]
+        if candidate:
+            args.append(f"--installation={candidate}")
+        args += ["uninstall", "-y", "--noninteractive"]
+        if delete_data:
+            args.append("--delete-data")
+        args.append(app_id)
+
+        process = run(*args, timeout=1800)
+        output = _output(process)
+        if process.returncode == 0:
+            return output
+        errors.append(output)
+
+    detail = next((text for text in reversed(errors) if text.strip()), "")
+    if detail:
+        raise FlatpakError(f"Could not remove {app_id}.\n{summarize(detail)}", detail)
+    raise FlatpakError(
+        f"Could not remove {app_id}. Nothing was uninstalled.",
+        f"flatpak uninstall {app_id} failed in every installation.",
+    )
 
 
 def update(app_id: str | None = None, installation: str = "user") -> str:
