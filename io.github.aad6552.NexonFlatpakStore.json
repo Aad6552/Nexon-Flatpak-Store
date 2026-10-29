@@ -22,6 +22,7 @@
         "install -Dm755 bin/nexon-flatpak-store /app/bin/nexon-flatpak-store",
         "install -Dm644 data/io.github.aad6552.NexonFlatpakStore.desktop /app/share/applications/io.github.aad6552.NexonFlatpakStore.desktop",
         "install -Dm644 data/io.github.aad6552.NexonFlatpakStore.metainfo.xml /app/share/metainfo/io.github.aad6552.NexonFlatpakStore.metainfo.xml",
+        "if ls docs/*.png >/dev/null 2>&1; then install -m644 docs/*.png /app/share/metainfo/; fi",
         "install -Dm644 data/icons/hicolor/64x64/apps/io.github.aad6552.NexonFlatpakStore.png /app/share/icons/hicolor/64x64/apps/io.github.aad6552.NexonFlatpakStore.png",
         "install -Dm644 data/icons/hicolor/128x128/apps/io.github.aad6552.NexonFlatpakStore.png /app/share/icons/hicolor/128x128/apps/io.github.aad6552.NexonFlatpakStore.png",
         "install -Dm644 data/icons/hicolor/256x256/apps/io.github.aad6552.NexonFlatpakStore.png /app/share/icons/hicolor/256x256/apps/io.github.aad6552.NexonFlatpakStore.png"
