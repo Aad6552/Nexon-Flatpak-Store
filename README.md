@@ -201,21 +201,18 @@ matches the GitHub account `Aad6552`, AppStream metadata and icons are included,
 and the store's dependencies all come from the GNOME runtime). It is **not yet
 published** on Flathub. Before opening a submission pull request:
 
-1. Commit the screenshots that ship with the Flatpak. The AppStream metadata
-   references three files under `docs/` — `discover.png`, `installed.png` and
-   `updates.png` — and both manifests copy them into `/app/share/metainfo/`, so
-   the application page shows them from inside the sandbox without fetching
-   anything. Capture the three views on a machine with a desktop and copy them in:
+1. Screenshots are referenced by URL. AppStream rejects local image paths —
+   `appstreamcli validate` reports `web-url-expected` — so the three files in
+   `docs/` are served through the `raw.githubusercontent.com` links in
+   `data/io.github.aad6552.NexonFlatpakStore.metainfo.xml`. Capture the views and
+   commit them before tagging:
    ```bash
    mkdir -p docs
    ./run.sh --source          # capture each view, e.g. gnome-screenshot -w -f docs/discover.png
    cp "$HOME/Pictures/Screenshots/"*.png docs/   # then rename to the three names above
    ```
-   Crop to the application window rather than the whole desktop, and commit the
-   PNGs before tagging: the tag has to contain the images the metadata points at.
-   Flathub's own listing prefers remotely hosted screenshots, so point the
-   `<image>` entries back at `raw.githubusercontent.com` URLs if the app is
-   submitted there later.
+   Crop to the application window rather than the whole desktop, and keep the
+   metadata's file names in step with what you commit.
 2. Tag the release and push the tag, which the submission manifest references:
    ```bash
    git tag -a v1.0.0 -m "Nexon Flatpak Store 1.0.0"
