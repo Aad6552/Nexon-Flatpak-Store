@@ -233,7 +233,9 @@ published** on Flathub. Before opening a submission pull request:
    # fork flathub/flathub on GitHub first, then:
    git clone git@github.com:Aad6552/flathub.git
    cd flathub
-   git checkout -b io.github.aad6552.NexonFlatpakStore
+   # Submissions are based on the new-pr branch, which is unrelated to master:
+   # a branch cut from master cannot be compared with it, and the PR is rejected.
+   git switch -c io.github.aad6552.NexonFlatpakStore origin/new-pr
    cp ../Nexon-Flatpak-Store/flathub/io.github.aad6552.NexonFlatpakStore.json .
    git add io.github.aad6552.NexonFlatpakStore.json
    git commit -m "Add io.github.aad6552.NexonFlatpakStore"
