@@ -201,23 +201,19 @@ matches the GitHub account `Aad6552`, AppStream metadata and icons are included,
 and the store's dependencies all come from the GNOME runtime). It is **not yet
 published** on Flathub. Before opening a submission pull request:
 
-1. Add at least one screenshot to
-   `data/io.github.aad6552.NexonFlatpakStore.metainfo.xml` (hosted URLs are
-   simplest, for example `raw.githubusercontent.com` links to PNGs in this repo).
-   Flathub requires screenshots for the app page. Take them on a machine with a
-   desktop, then commit them under `docs/`:
+1. Commit the screenshots the AppStream metadata already points at. Flathub
+   requires them for the app page, and
+   `data/io.github.aad6552.NexonFlatpakStore.metainfo.xml` references three files
+   under `docs/`: `discover.png`, `installed.png` and `updates.png`. Capture them
+   on a machine with a desktop, then copy them in:
    ```bash
-   ./run.sh --source          # then capture the window, e.g. gnome-screenshot -a -f docs/discover.png
+   mkdir -p docs
+   ./run.sh --source          # capture each view, e.g. gnome-screenshot -w -f docs/discover.png
+   cp "$HOME/Pictures/Screenshots/"*.png docs/   # then rename to the three names above
    ```
-   ```xml
-   <screenshots>
-     <screenshot type="default">
-       <caption>Browse and search Flathub</caption>
-       <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/discover.png</image>
-     </screenshot>
-   </screenshots>
-   ```
-   Place the block after `</description>` and before `<launchable>`.
+   Flathub asks for at least 800x450 and a 16:9 or 4:3 aspect ratio, so crop to
+   the application window rather than the whole desktop. Commit the PNGs before
+   tagging: the tag has to contain the images the metadata points at.
 2. Tag the release and push the tag, which the submission manifest references:
    ```bash
    git tag -a v1.0.0 -m "Nexon Flatpak Store 1.0.0"
@@ -264,6 +260,11 @@ the repository root builds from the working directory for local development.
   need polkit approval that a sandboxed app cannot show. The store installs to
   your user account on purpose; for system installs use
   `flatpak install --system` in a terminal.
+* **Removing an application fails** — the Installed tab shows `system` after the
+  version of apps that were installed system-wide, and removing those needs
+  administrator approval the store cannot ask for. Run
+  `sudo flatpak uninstall <app-id>` in a terminal, or install a per-user copy
+  with `flatpak install --user flathub <app-id>` and remove that instead.
 * **No application appears in the menu after building** — log out and back in,
   or run `flatpak run io.github.aad6552.NexonFlatpakStore`.
 * **Icons or descriptions stay empty** — check the network permission with

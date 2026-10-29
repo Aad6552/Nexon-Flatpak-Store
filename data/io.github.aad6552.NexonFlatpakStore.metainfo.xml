@@ -24,6 +24,21 @@
     </ul>
   </description>
 
+  <screenshots>
+    <screenshot type="default">
+      <caption>Browse and search the Flathub catalogue</caption>
+      <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/discover.png</image>
+    </screenshot>
+    <screenshot type="default">
+      <caption>Install, open and remove your applications</caption>
+      <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/installed.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Keep everything up to date</caption>
+      <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/updates.png</image>
+    </screenshot>
+  </screenshots>
+
   <launchable type="desktop-id">io.github.aad6552.NexonFlatpakStore.desktop</launchable>
 
   <url type="homepage">https://github.com/Aad6552/Nexon-Flatpak-Store</url>
