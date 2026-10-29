@@ -1,0 +1,33 @@
+#!/bin/sh
+# Launcher for Nexon Flatpak Store.
+#
+# Works both from a source checkout (bin/ next to src/) and from an installed
+# location (/app/bin with the package in /app/share/nexon-flatpak-store).
+set -eu
+
+self=$0
+while [ -L "$self" ]; do
+    target=$(readlink "$self")
+    case $target in
+        /*) self=$target ;;
+        *) self=$(dirname "$self")/$target ;;
+    esac
+done
+here=$(cd "$(dirname "$self")" && pwd -P)
+
+for candidate in \
+    "${NEXON_FLATPAK_STORE_DIR:-}" \
+    "$here/../share/nexon-flatpak-store" \
+    "$here/../src" \
+    "/app/share/nexon-flatpak-store"
+do
+    if [ -n "$candidate" ] && [ -f "$candidate/nexon_store/__main__.py" ]; then
+        PYTHONPATH="$candidate${PYTHONPATH:+:$PYTHONPATH}"
+        export PYTHONPATH
+        exec python3 -m nexon_store "$@"
+    fi
+done
+
+echo "Nexon Flatpak Store: could not find the nexon_store package." >&2
+echo "Run this script from a clone of the repository, or install the Flatpak." >&2
+exit 1

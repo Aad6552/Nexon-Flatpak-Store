@@ -1,0 +1,9 @@
+# Local build output
+.flatpak-builder/
+build-dir/
+*.flatpak
+*.flatpakrepo
+
+# Python
+__pycache__/
+*.py[cod]

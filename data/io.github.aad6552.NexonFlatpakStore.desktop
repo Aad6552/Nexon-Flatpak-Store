@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Nexon Flatpak Store
+GenericName=Application Store
+Comment=Browse, install, update and remove Flathub applications
+Exec=nexon-flatpak-store
+Icon=io.github.aad6552.NexonFlatpakStore
+Terminal=false
+Categories=System;PackageManager;GTK;
+Keywords=flatpak;flathub;store;applications;install;update;remove;packages;
+StartupNotify=true

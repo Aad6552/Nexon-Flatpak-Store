@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.aad6552.NexonFlatpakStore</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Nexon Flatpak Store</name>
+  <summary>Browse, install, update and remove Flathub applications</summary>
+
+  <description>
+    <p>
+      Nexon Flatpak Store is a small, native application store for Flatpak. It talks
+      directly to Flathub and to the Flatpak command line, so it works the same on
+      every Linux distribution instead of depending on one vendor's software centre.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Search the whole Flathub catalogue, or browse curated collections and categories.</li>
+      <li>Install applications, open them, and remove them again with one click.</li>
+      <li>See which of your applications have updates and update one or all of them.</li>
+      <li>Read the full description, screenshots, licence and latest release notes before installing.</li>
+      <li>Works inside the Flatpak sandbox by driving the host's flatpak through flatpak-spawn.</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.aad6552.NexonFlatpakStore.desktop</launchable>
+
+  <url type="homepage">https://github.com/Aad6552/Nexon-Flatpak-Store</url>
+  <url type="bugtracker">https://github.com/Aad6552/Nexon-Flatpak-Store/issues</url>
+  <url type="vcs-browser">https://github.com/Aad6552/Nexon-Flatpak-Store</url>
+
+  <developer id="io.github.aad6552">
+    <name>Aad6552</name>
+  </developer>
+
+  <content_rating type="oars-1.1"/>
+
+  <categories>
+    <category>System</category>
+    <category>PackageManager</category>
+  </categories>
+
+  <keywords>
+    <keyword>flatpak</keyword>
+    <keyword>flathub</keyword>
+    <keyword>store</keyword>
+    <keyword>install</keyword>
+    <keyword>update</keyword>
+    <keyword>remove</keyword>
+    <keyword>packages</keyword>
+  </keywords>
+
+  <releases>
+    <release version="1.0.0" date="2026-10-29">
+      <description>
+        <p>First release: browse Flathub, install, open, remove and update applications.</p>
+      </description>
+    </release>
+  </releases>
+</component>
