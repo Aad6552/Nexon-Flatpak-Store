@@ -280,6 +280,9 @@ the repository root builds from the working directory for local development.
   need polkit approval that a sandboxed app cannot show. The store installs to
   your user account on purpose; for system installs use
   `flatpak install --system` in a terminal.
+* **"Could not find installation user" when installing** — older flatpak
+  releases reject `--installation=user`; current builds pass `--user` and
+  `--system` instead, so rebuild with `./install.sh` and the message goes away.
 * **Removing an application fails** — the Installed tab shows `system` after the
   version of apps that were installed system-wide, and removing those needs
   administrator approval the store cannot ask for. Run

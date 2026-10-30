@@ -62,6 +62,26 @@ def _command(*args: str) -> list[str]:
     return [*prefix, *args]
 
 
+#: Built-in installations are selected with scope flags, not by name.
+INSTALLATION_FLAGS = {"user": "--user", "system": "--system"}
+
+
+def installation_args(installation: str = "") -> list[str]:
+    """Return the flatpak flags that select ``installation``.
+
+    ``--installation=NAME`` only addresses custom installations declared in
+    ``installations.d``; the built-in ones are selected with ``--user`` and
+    ``--system``. Older flatpak releases reject ``--installation=user`` with
+    "Could not find installation user".
+    """
+    if not installation:
+        return []
+    flag = INSTALLATION_FLAGS.get(installation)
+    if flag is not None:
+        return [flag]
+    return [f"--installation={installation}"]
+
+
 def run(*args: str, timeout: int = DEFAULT_TIMEOUT) -> subprocess.CompletedProcess[str]:
     """Run a command (on the host when sandboxed) and capture its output."""
     try:
@@ -185,7 +205,7 @@ def updates() -> dict[str, dict[str, str]]:
     for installation in installations() or ["user"]:
         process = run(
             "flatpak",
-            f"--installation={installation}",
+            *installation_args(installation),
             "remote-ls",
             "--updates",
             "--columns=application,branch,version",
@@ -198,7 +218,7 @@ def updates() -> dict[str, dict[str, str]]:
 
 
 def remotes(installation: str = "user") -> dict[str, str]:
-    process = run("flatpak", f"--installation={installation}", "remotes", "--columns=name,url")
+    process = run("flatpak", *installation_args(installation), "remotes", "--columns=name,url")
     if process.returncode != 0:
         return {}
     return parse_remotes_output(process.stdout)
@@ -210,7 +230,7 @@ def ensure_flathub(installation: str = "user") -> bool:
         return False
     _checked(
         "flatpak",
-        f"--installation={installation}",
+        *installation_args(installation),
         "remote-add",
         "--if-not-exists",
         FLATHUB_REMOTE,
@@ -227,7 +247,7 @@ def install(app_id: str, installation: str = "user", remote: str = FLATHUB_REMOT
     """Install ``app_id`` from ``remote`` into ``installation``."""
     return _checked(
         "flatpak",
-        f"--installation={installation}",
+        *installation_args(installation),
         "install",
         "-y",
         "--noninteractive",
@@ -254,10 +274,7 @@ def uninstall(app_id: str, installation: str = "", delete_data: bool = False) ->
 
     errors: list[str] = []
     for candidate in candidates:
-        args = ["flatpak"]
-        if candidate:
-            args.append(f"--installation={candidate}")
-        args += ["uninstall", "-y", "--noninteractive"]
+        args = ["flatpak", *installation_args(candidate), "uninstall", "-y", "--noninteractive"]
         if delete_data:
             args.append("--delete-data")
         args.append(app_id)
@@ -281,7 +298,7 @@ def update(app_id: str | None = None, installation: str = "user") -> str:
     """Update one application, or every application in ``installation``."""
     args = [
         "flatpak",
-        f"--installation={installation}",
+        *installation_args(installation),
         "update",
         "-y",
         "--noninteractive",

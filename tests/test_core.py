@@ -58,6 +58,12 @@ class FlatpakParsingTests(unittest.TestCase):
 
 
 class FlatpakCommandTests(unittest.TestCase):
+    def test_builtin_installations_use_scope_flags(self) -> None:
+        self.assertEqual(flatpak.installation_args("user"), ["--user"])
+        self.assertEqual(flatpak.installation_args("system"), ["--system"])
+        self.assertEqual(flatpak.installation_args("custom"), ["--installation=custom"])
+        self.assertEqual(flatpak.installation_args(""), [])
+
     def test_direct_command_when_not_sandboxed(self) -> None:
         with mock.patch.object(flatpak, "_use_host_spawn", return_value=False):
             self.assertEqual(flatpak._command("flatpak", "list"), ["flatpak", "list"])
@@ -76,7 +82,7 @@ class FlatpakCommandTests(unittest.TestCase):
             args = run.call_args.args
 
         self.assertEqual(args[0], "flatpak")
-        self.assertIn("--installation=system", args)
+        self.assertIn("--system", args)
         self.assertIn("-y", args)
         self.assertIn("flathub", args)
         self.assertEqual(args[-1], "org.mozilla.firefox")
@@ -107,7 +113,7 @@ class FlatpakCommandTests(unittest.TestCase):
             calls.append(args)
             if args[1:3] == ("list", "--columns=installation"):
                 return mock.Mock(returncode=0, stdout="system\nuser\n", stderr="")
-            if args[:2] == ("flatpak", "--installation=system"):
+            if args[:2] == ("flatpak", "--system"):
                 return mock.Mock(returncode=1, stdout="", stderr="error: not installed")
             return mock.Mock(returncode=0, stdout="removed", stderr="")
 
@@ -116,7 +122,7 @@ class FlatpakCommandTests(unittest.TestCase):
 
         self.assertEqual(output, "removed")
         self.assertTrue(
-            any(args[:2] == ("flatpak", "--installation=user") for args in calls)
+            any(args[:2] == ("flatpak", "--user") for args in calls)
         )
 
     def test_summarize_keeps_last_lines(self) -> None:
