@@ -250,7 +250,25 @@ published** on Flathub. Before opening a submission pull request:
    permission: the application is a Flatpak manager, so it must invoke the host
    `flatpak` command through `flatpak-spawn` instead of touching host files.
 
-The `flathub/` manifest builds from the `v1.0.0` git tag, while the manifest in
+### Submission checklist
+
+Flathub's submission bot runs hourly and closes pull requests that miss items on
+the template checklist. The ones that have caught this repository out:
+
+* **A demo video is required.** Record 20-30 seconds of the application running
+  as a Flatpak and paste the link into the video line. A missing video is closed
+  automatically with the diagnostic `Video checklist requirement not met`.
+* **The application ID must resolve to the repository.** `io.github.aad6552.NexonFlatpakStore`
+  is looked up as `https://github.com/aad6552/NexonFlatpakStore`, so a repository
+  named `Nexon-Flatpak-Store` fails `appid-url-not-reachable`: rename it, or ask
+  reviewers for an exception.
+* **Replace every placeholder** in the pull request template. Answer the
+  AI-disclosure line honestly: the policy asks what was AI-generated and forbids
+  using AI to write the pull request or the review replies.
+* **Do not open a second pull request** while one is closed for a fixable reason;
+  reply on the closed one instead.
+
+The `flathub/` manifest builds from the git tag pinned in its `sources` entry, while the manifest in
 the repository root builds from the working directory for local development.
 
 ## Troubleshooting
