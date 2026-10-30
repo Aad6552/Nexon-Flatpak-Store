@@ -41,7 +41,7 @@ needed to install apps through the store.
 ## Install
 
 ```bash
-git clone https://github.com/Aad6552/Nexon-Flatpak-Store.git
+git clone https://github.com/Aad6552/NexonFlatpakStore.git
 cd Nexon-Flatpak-Store
 ./install.sh
 ```

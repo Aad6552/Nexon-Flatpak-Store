@@ -27,23 +27,23 @@
   <screenshots>
     <screenshot type="default">
       <caption>Browse and search the Flathub catalogue</caption>
-      <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/discover.png</image>
+      <image>https://raw.githubusercontent.com/Aad6552/NexonFlatpakStore/main/docs/discover.png</image>
     </screenshot>
     <screenshot type="default">
       <caption>Install, open and remove your applications</caption>
-      <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/installed.png</image>
+      <image>https://raw.githubusercontent.com/Aad6552/NexonFlatpakStore/main/docs/installed.png</image>
     </screenshot>
     <screenshot>
       <caption>Keep everything up to date</caption>
-      <image>https://raw.githubusercontent.com/Aad6552/Nexon-Flatpak-Store/main/docs/updates.png</image>
+      <image>https://raw.githubusercontent.com/Aad6552/NexonFlatpakStore/main/docs/updates.png</image>
     </screenshot>
   </screenshots>
 
   <launchable type="desktop-id">io.github.aad6552.NexonFlatpakStore.desktop</launchable>
 
-  <url type="homepage">https://github.com/Aad6552/Nexon-Flatpak-Store</url>
-  <url type="bugtracker">https://github.com/Aad6552/Nexon-Flatpak-Store/issues</url>
-  <url type="vcs-browser">https://github.com/Aad6552/Nexon-Flatpak-Store</url>
+  <url type="homepage">https://github.com/Aad6552/NexonFlatpakStore</url>
+  <url type="bugtracker">https://github.com/Aad6552/NexonFlatpakStore/issues</url>
+  <url type="vcs-browser">https://github.com/Aad6552/NexonFlatpakStore</url>
 
   <developer id="io.github.aad6552">
     <name>Aad6552</name>

@@ -29,7 +29,7 @@
       "sources": [
         {
           "type": "git",
-          "url": "https://github.com/Aad6552/Nexon-Flatpak-Store.git",
+          "url": "https://github.com/Aad6552/NexonFlatpakStore.git",
           "tag": "v1.0.1"
         }
       ]
