@@ -35,8 +35,9 @@ line. It is prepared to be submitted to Flathub itself.
 * For running from source only: Python 3.9+, PyGObject, GTK 4.10+ and
   libadwaita 1.2+ (normally `python3-gi`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`).
 
-Flatpak applications are installed per user by default, so no root password is
-needed to install apps through the store.
+Installing runs plain `flatpak install flathub <app-id>`, so applications go to
+flatpak's default installation — your user installation on most hosts — and no
+root password is needed to install apps through the store.
 
 ## Install
 
@@ -276,13 +277,17 @@ the repository root builds from the working directory for local development.
 * **"The flatpak command was not found"** — Flatpak is not installed, or (inside
   the sandbox) the `org.freedesktop.Flatpak` permission was removed. Install
   Flatpak or reinstall the app with `./install.sh`.
-* **Installing fails with authorisation errors** — system-wide installations
-  need polkit approval that a sandboxed app cannot show. The store installs to
-  your user account on purpose; for system installs use
-  `flatpak install --system` in a terminal.
-* **"Could not find installation user" when installing** — older flatpak
-  releases reject `--installation=user`; current builds pass `--user` and
-  `--system` instead, so rebuild with `./install.sh` and the message goes away.
+* **Installing fails with authorisation errors** — the store does not choose an
+  installation, so it goes wherever `flatpak install flathub <app-id>` would go.
+  If your default is the system installation, that needs polkit approval a
+  sandboxed app cannot show; use `flatpak install --user flathub <app-id>` in a
+  terminal instead.
+* **"Could not find installation user" (or any other installation name)** —
+  installing no longer passes an installation name at all. Updates and removals
+  still use the installation `flatpak list` reported, with `--user` / `--system`
+  for the built-ins and a retry without a scope when flatpak rejects the name. If
+  the message still appears, the installed Flatpak is an older build: rebuild
+  with `./install.sh` (or run `./run.sh --source` to use this checkout).
 * **Removing an application fails** — the Installed tab shows `system` after the
   version of apps that were installed system-wide, and removing those needs
   administrator approval the store cannot ask for. Run

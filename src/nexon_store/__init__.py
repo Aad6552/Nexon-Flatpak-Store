@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "1.0.3"
 
 APP_ID = "io.github.aad6552.NexonFlatpakStore"
 APP_NAME = "Nexon Flatpak Store"

@@ -67,6 +67,16 @@
   </keywords>
 
   <releases>
+    <release version="1.0.3" date="2026-11-01">
+      <description>
+        <p>
+          Installing uses flatpak's own default installation again, and updates
+          or removals are retried without an installation scope when flatpak does
+          not accept the reported name, so the "Could not find installation"
+          message no longer appears.
+        </p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-29">
       <description>
         <p>First release: browse Flathub, install, open, remove and update applications.</p>

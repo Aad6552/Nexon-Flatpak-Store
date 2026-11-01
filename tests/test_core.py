@@ -64,6 +64,59 @@ class FlatpakCommandTests(unittest.TestCase):
         self.assertEqual(flatpak.installation_args("custom"), ["--installation=custom"])
         self.assertEqual(flatpak.installation_args(""), [])
 
+    def test_builtin_installations_match_regardless_of_case(self) -> None:
+        self.assertEqual(flatpak.installation_args("User"), ["--user"])
+        self.assertEqual(flatpak.installation_args(" SYSTEM "), ["--system"])
+
+    def test_rejected_installation_name_falls_back_to_the_default(self) -> None:
+        calls: list[tuple[str, ...]] = []
+
+        def fake_run(*args, **kwargs):
+            calls.append(args)
+            if "--installation=custom" in args:
+                return mock.Mock(
+                    returncode=1,
+                    stdout="",
+                    stderr="error: Could not find installation custom\n",
+                )
+            return mock.Mock(returncode=0, stdout="updated", stderr="")
+
+        with mock.patch.object(flatpak, "run", side_effect=fake_run):
+            output = flatpak.update("org.mozilla.firefox", installation="custom")
+
+        self.assertEqual(output, "updated")
+        self.assertEqual(calls[0][:2], ("flatpak", "--installation=custom"))
+        self.assertNotIn("--installation=custom", calls[1])
+        self.assertIn("update", calls[1])
+
+    def test_other_failures_are_not_retried(self) -> None:
+        with mock.patch.object(flatpak, "run") as run:
+            run.return_value = mock.Mock(
+                returncode=1, stdout="", stderr="error: app is not installed\n"
+            )
+            with self.assertRaises(flatpak.FlatpakError):
+                flatpak.update("org.mozilla.firefox", installation="custom")
+
+        self.assertEqual(run.call_count, 1)
+
+    def test_installation_listing_ignores_cli_errors(self) -> None:
+        with mock.patch.object(flatpak, "run") as run:
+            run.return_value = mock.Mock(
+                returncode=1,
+                stdout="",
+                stderr="error: Could not find installation custom\n",
+            )
+            self.assertEqual(flatpak.installations(), [])
+
+    def test_installation_listing_drops_noise_lines(self) -> None:
+        with mock.patch.object(flatpak, "run") as run:
+            run.return_value = mock.Mock(
+                returncode=0,
+                stdout="user\nsystem\nerror: something went wrong\nuser\n",
+                stderr="",
+            )
+            self.assertEqual(flatpak.installations(), ["user", "system"])
+
     def test_direct_command_when_not_sandboxed(self) -> None:
         with mock.patch.object(flatpak, "_use_host_spawn", return_value=False):
             self.assertEqual(flatpak._command("flatpak", "list"), ["flatpak", "list"])
@@ -86,6 +139,23 @@ class FlatpakCommandTests(unittest.TestCase):
         self.assertIn("-y", args)
         self.assertIn("flathub", args)
         self.assertEqual(args[-1], "org.mozilla.firefox")
+
+    def test_install_uses_flatpaks_default_installation(self) -> None:
+        with mock.patch.object(flatpak, "run") as run:
+            run.return_value = mock.Mock(returncode=0, stdout="", stderr="")
+            flatpak.install("org.mozilla.firefox")
+
+        self.assertEqual(
+            run.call_args.args,
+            (
+                "flatpak",
+                "install",
+                "-y",
+                "--noninteractive",
+                "flathub",
+                "org.mozilla.firefox",
+            ),
+        )
 
     def test_uninstall_can_delete_data(self) -> None:
         with mock.patch.object(flatpak, "run") as run:

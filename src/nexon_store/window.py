@@ -1112,11 +1112,11 @@ class StoreWindow(Adw.ApplicationWindow):
     # Operations
     # ------------------------------------------------------------------ #
     def _install_app(self, app_id: str) -> None:
-        installation = "user"
-
         def work() -> str:
-            flatpak.ensure_flathub(installation)
-            return flatpak.install(app_id, installation=installation)
+            # Plain ``flatpak install flathub <app>``: no installation is selected,
+            # so flatpak uses its default one.
+            flatpak.ensure_flathub()
+            return flatpak.install(app_id)
 
         self._run_operation(
             f"Installing {app_id}…", work, success_message=f"{app_id} was installed."

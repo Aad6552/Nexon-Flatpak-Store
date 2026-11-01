@@ -72,14 +72,23 @@ def installation_args(installation: str = "") -> list[str]:
     ``--installation=NAME`` only addresses custom installations declared in
     ``installations.d``; the built-in ones are selected with ``--user`` and
     ``--system``. Older flatpak releases reject ``--installation=user`` with
-    "Could not find installation user".
+    "Could not find installation user", and ``flatpak list`` does not report
+    the built-in names identically on every release, so the built-ins are
+    matched case-insensitively and everything else is retried by
+    :func:`_scoped_run` when flatpak does not accept the name.
     """
-    if not installation:
+    name = (installation or "").strip()
+    if not name:
         return []
-    flag = INSTALLATION_FLAGS.get(installation)
+    flag = INSTALLATION_FLAGS.get(name.lower())
     if flag is not None:
         return [flag]
-    return [f"--installation={installation}"]
+    return [f"--installation={name}"]
+
+
+def _missing_installation(output: str) -> bool:
+    """True when flatpak rejected the installation name, not the operation."""
+    return "could not find installation" in output.lower()
 
 
 def run(*args: str, timeout: int = DEFAULT_TIMEOUT) -> subprocess.CompletedProcess[str]:
@@ -110,13 +119,38 @@ def summarize(output: str, limit: int = 12) -> str:
     return "\n".join(lines[-limit:])
 
 
-def _checked(*args: str, timeout: int = DEFAULT_TIMEOUT, action: str) -> str:
-    process = run(*args, timeout=timeout)
+def _checked_process(process: subprocess.CompletedProcess[str], action: str) -> str:
     output = _output(process)
     if process.returncode != 0:
         message = summarize(output) or f"{action} failed with status {process.returncode}."
         raise FlatpakError(message, output)
     return output
+
+
+def _checked(*args: str, timeout: int = DEFAULT_TIMEOUT, action: str) -> str:
+    return _checked_process(run(*args, timeout=timeout), action)
+
+
+def _scoped_run(
+    *args: str, installation: str = "", timeout: int = DEFAULT_TIMEOUT
+) -> subprocess.CompletedProcess[str]:
+    """Run ``flatpak ARGS`` scoped to ``installation``.
+
+    ``flatpak list`` reports whichever installations it can see, but the CLI
+    does not always accept those names back: some releases name the built-in
+    installations differently than the column shows, and a custom installation
+    can disappear between the listing and the operation. When flatpak answers
+    "Could not find installation NAME", the command is retried without a scope
+    so flatpak uses its default installation, rather than showing that message
+    to the user.
+    """
+    scope = installation_args(installation)
+    process = run("flatpak", *scope, *args, timeout=timeout)
+    if not scope or process.returncode == 0:
+        return process
+    if not _missing_installation(_output(process)):
+        return process
+    return run("flatpak", *args, timeout=timeout)
 
 
 # --------------------------------------------------------------------------- #
@@ -180,13 +214,25 @@ def list_installed() -> dict[str, Installation]:
     return parse_list_output(output)
 
 
+def _plausible_installation(name: str) -> bool:
+    """Reject CLI error text that must not be mistaken for a name.
+
+    Installation names are directory names in ``installations.d``, so they
+    cannot contain spaces or colons, which keeps "error: ..." lines of a
+    failed listing out of the returned list.
+    """
+    return 0 < len(name) <= 64 and " " not in name and ":" not in name
+
+
 def installations() -> list[str]:
     """Return the names of the flatpak installations in use (e.g. ``user``)."""
     process = run("flatpak", "list", "--columns=installation")
+    if process.returncode != 0:
+        return []
     names: list[str] = []
-    for line in _output(process).splitlines():
+    for line in (process.stdout or "").splitlines():
         name = line.strip()
-        if name and name not in names:
+        if name and name not in names and _plausible_installation(name):
             names.append(name)
     return names
 
@@ -217,25 +263,26 @@ def updates() -> dict[str, dict[str, str]]:
     return result
 
 
-def remotes(installation: str = "user") -> dict[str, str]:
-    process = run("flatpak", *installation_args(installation), "remotes", "--columns=name,url")
+def remotes(installation: str = "") -> dict[str, str]:
+    process = _scoped_run("remotes", "--columns=name,url", installation=installation)
     if process.returncode != 0:
         return {}
     return parse_remotes_output(process.stdout)
 
 
-def ensure_flathub(installation: str = "user") -> bool:
+def ensure_flathub(installation: str = "") -> bool:
     """Add the Flathub remote if it is missing. Returns True when it was added."""
     if FLATHUB_REMOTE in remotes(installation):
         return False
-    _checked(
-        "flatpak",
-        *installation_args(installation),
-        "remote-add",
-        "--if-not-exists",
-        FLATHUB_REMOTE,
-        FLATHUB_REPO,
-        action="Adding the Flathub remote",
+    _checked_process(
+        _scoped_run(
+            "remote-add",
+            "--if-not-exists",
+            FLATHUB_REMOTE,
+            FLATHUB_REPO,
+            installation=installation,
+        ),
+        "Adding the Flathub remote",
     )
     return True
 
@@ -243,18 +290,25 @@ def ensure_flathub(installation: str = "user") -> bool:
 # --------------------------------------------------------------------------- #
 # Mutations
 # --------------------------------------------------------------------------- #
-def install(app_id: str, installation: str = "user", remote: str = FLATHUB_REMOTE) -> str:
-    """Install ``app_id`` from ``remote`` into ``installation``."""
-    return _checked(
-        "flatpak",
-        *installation_args(installation),
-        "install",
-        "-y",
-        "--noninteractive",
-        remote,
-        app_id,
-        timeout=3600,
-        action=f"Installing {app_id}",
+def install(app_id: str, installation: str = "", remote: str = FLATHUB_REMOTE) -> str:
+    """Install ``app_id`` from ``remote`` with flatpak's default installation.
+
+    No installation is selected by default, so the command is exactly
+    ``flatpak install flathub <app-id>`` and flatpak puts the application
+    wherever it normally would; ``installation`` is only passed on when a
+    caller has to address a specific one.
+    """
+    return _checked_process(
+        _scoped_run(
+            "install",
+            "-y",
+            "--noninteractive",
+            remote,
+            app_id,
+            installation=installation,
+            timeout=3600,
+        ),
+        f"Installing {app_id}",
     )
 
 
@@ -296,16 +350,13 @@ def uninstall(app_id: str, installation: str = "", delete_data: bool = False) ->
 
 def update(app_id: str | None = None, installation: str = "user") -> str:
     """Update one application, or every application in ``installation``."""
-    args = [
-        "flatpak",
-        *installation_args(installation),
-        "update",
-        "-y",
-        "--noninteractive",
-    ]
+    args = ["update", "-y", "--noninteractive"]
     if app_id:
         args.append(app_id)
-    return _checked(*args, timeout=3600, action="Updating applications")
+    return _checked_process(
+        _scoped_run(*args, installation=installation, timeout=3600),
+        "Updating applications",
+    )
 
 
 def refresh_appstream() -> str:
